@@ -12,6 +12,11 @@ from logging.handlers import RotatingFileHandler
 from typing import Any, Dict
 
 app = Flask(__name__)
+
+# Ensure LOG_FILE is set in config, fallback to 'app.log'
+if 'LOG_FILE' not in app.config:
+    app.config['LOG_FILE'] = 'app.log'
+
 app.config.from_object(Config) # Load configuration from Config object
 
 # Configure logging
@@ -151,57 +156,21 @@ def analyze() -> Any:
                 'recommendation': recommendation
             }
             return jsonify(result)
-        # Trusted domain override for strong signals
-        if (
-            any(domain in url for domain in trusted_domains) # Check if URL is from a trusted domain
-            and product.get('avg_rating', 0) >= 4.0
-            and product.get('num_reviews', 0) > 100
-            and product.get('desc_length', 0) > 100
-        ):
-            verdict = 'Likely Genuine'
-            score = 90
-            result = {
-                'verdict': verdict,
-                'authenticity_score': score,
-                'details': {
-                    'Product Title': product.get('title', 'N/A'),
-                    'Product Price': product.get('price', 'N/A'),
-                    'Title Similarity': 'N/A',
-                    'Image Similarity': 'N/A',
-                    'Price Deviation': 'N/A',
-                    'Seller': product.get('seller', 'Unknown'),
-                    'Reference Source': 'N/A',
-                    'Num Reviews': product.get('num_reviews', 0),
-                    'Avg Rating': product.get('avg_rating', 0.0),
-                    'Image Count': product.get('image_count', 0),
-                    'Description Length': product.get('desc_length', 0),
-                    'Keyword: Original': int(product.get('keyword_flags', {}).get('original', 0)),
-                    'Keyword: Replica': int(product.get('keyword_flags', {}).get('replica', 0)),
-                    'Keyword: 100% Genuine': int(product.get('keyword_flags', {}).get('100% genuine', 0))
-                },
-                'recommendation': 'This appears to be a genuine product from a trusted source.'
-            }
-            return jsonify(result)
-        # Manual trusted source override
-        if any(domain in url for domain in trusted_domains) and price_dev == 0 and image_sim > 0.9:
-            score = 95
-            verdict = 'Likely Genuine'
-        else:
-            # 4. ML classifier: pass all features in correct order
-            features = [
-                text_sim,
-                image_sim,
-                price_dev,
-                int(known_seller),
-                product.get('num_reviews', 0),
-                product.get('avg_rating', 0.0),
-                product.get('image_count', 0),
-                product.get('desc_length', 0),
-                int(product.get('keyword_flags', {}).get('original', 0)),
-                int(product.get('keyword_flags', {}).get('replica', 0)),
-                int(product.get('keyword_flags', {}).get('100% genuine', 0)),
-            ]
-            score, verdict = classify_product(*features)
+        # Always use ML classifier for verdict
+        features = [
+            text_sim,
+            image_sim,
+            price_dev,
+            int(known_seller),
+            product.get('num_reviews', 0),
+            product.get('avg_rating', 0.0),
+            product.get('image_count', 0),
+            product.get('desc_length', 0),
+            int(product.get('keyword_flags', {}).get('original', 0)),
+            int(product.get('keyword_flags', {}).get('replica', 0)),
+            int(product.get('keyword_flags', {}).get('100% genuine', 0)),
+        ]
+        score, verdict = classify_product(*features)
         # 5. Build response
         result = {
             'verdict': verdict,
