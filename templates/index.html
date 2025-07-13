@@ -268,8 +268,7 @@
                 $.ajax({
                     url: '/analyze',
                     method: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify({ url }),
+                    data: { url: url },
                     success: function(data) {
                         $('#loading').hide();
                         if(data.error) {
@@ -282,33 +281,75 @@
                         let badge = data.verdict==="Likely Genuine" ? '<span class="badge bg-success ms-2">✔</span>' : '<span class="badge bg-danger ms-2">!</span>';
                         let html = `<div class='card shadow fade-in verdict-anim'><div class='card-body'>`;
                         html += `<h3 class='mb-3'>${icon} Verdict: <span class='${data.verdict==="Likely Genuine"?'text-success':'text-danger'}'>${data.verdict}</span> ${badge}</h3>`;
-                        html += `<p><strong>Authenticity Score:</strong> <span class='fw-bold'>${data.authenticity_score}%</span></p>`;
+                        html += `<p><strong>Authenticity Score:</strong> <span class='fw-bold'>${data.score}%</span></p>`;
                         html += `<ul class='list-group mb-3'>`;
                         const tooltips = {
+                            'Product Title': 'Extracted product title',
+                            'Product Price': 'Product price in INR',
+                            'Seller': 'Seller name',
+                            'Num Reviews': 'Number of user reviews',
                             'Avg Rating': 'Average user rating (out of 5)',
-                            'Description Length': 'Number of characters in product description',
                             'Image Count': 'Number of product images',
+                            'Description Length': 'Number of characters in product description',
+                            'Title Similarity': 'Similarity to trusted source title',
                             'Image Similarity': 'Similarity to trusted source image',
-                            'Keyword: 100% Genuine': 'Contains the phrase "100% Genuine"',
+                            'Price Deviation': 'Difference from trusted source price',
+                            'Known Seller': 'Whether seller is verified',
+                            'Reference Source': 'Matched trusted e-commerce site',
                             'Keyword: Original': 'Contains the word "Original"',
                             'Keyword: Replica': 'Contains the word "Replica"',
-                            'Num Reviews': 'Number of user reviews',
-                            'Price Deviation': 'Difference from trusted source price',
-                            'Reference Source': 'Matched trusted e-commerce site',
-                            'Seller': 'Seller name',
-                            'Title Similarity': 'Similarity to trusted source title'
+                            'Keyword: 100% Genuine': 'Contains the phrase "100% Genuine"'
                         };
+                        
+                        // Map backend field names to display names
+                        const fieldMapping = {
+                            'product_title': 'Product Title',
+                            'product_price': 'Product Price',
+                            'seller': 'Seller',
+                            'num_reviews': 'Num Reviews',
+                            'avg_rating': 'Avg Rating',
+                            'image_count': 'Image Count',
+                            'desc_length': 'Description Length',
+                            'title_similarity': 'Title Similarity',
+                            'image_similarity': 'Image Similarity',
+                            'price_deviation': 'Price Deviation',
+                            'known_seller': 'Known Seller',
+                            'reference_source': 'Reference Source',
+                            'keyword_original': 'Keyword: Original',
+                            'keyword_replica': 'Keyword: Replica',
+                            'keyword_genuine': 'Keyword: 100% Genuine'
+                        };
+                        
                         for (const [k, v] of Object.entries(data.details)) {
-                            let tip = tooltips[k] ? ` data-bs-toggle='tooltip' title='${tooltips[k]}'` : '';
-                            html += `<li class='list-group-item d-flex justify-content-between align-items-center'${tip}><span>${k}</span><span class='fw-semibold'>${v}</span></li>`;
+                            const displayName = fieldMapping[k] || k;
+                            let tip = tooltips[displayName] ? ` data-bs-toggle='tooltip' title='${tooltips[displayName]}'` : '';
+                            let displayValue = v;
+                            
+                            // Format boolean values
+                            if (typeof v === 'boolean') {
+                                displayValue = v ? 'Yes' : 'No';
+                            }
+                            
+                            html += `<li class='list-group-item d-flex justify-content-between align-items-center'${tip}><span>${displayName}</span><span class='fw-semibold'>${displayValue}</span></li>`;
                         }
                         html += `</ul>`;
-                        html += `<p class='mb-0'><strong>Recommendation:</strong> <span class='fw-semibold'>${data.recommendation}</span></p>`;
+                        
+                        // Add recommendation based on verdict
+                        let recommendation = '';
+                        if (data.verdict === "Likely Genuine") {
+                            recommendation = 'Safe to buy from trusted source.';
+                        } else if (data.verdict === "High Risk") {
+                            recommendation = 'Avoid purchasing.';
+                        } else {
+                            recommendation = 'Review details carefully.';
+                        }
+                        
+                        html += `<p class='mb-0'><strong>Recommendation:</strong> <span class='fw-semibold'>${recommendation}</span></p>`;
                         html += `</div></div>`;
                         $('#results').html(html).show();
                         showResultActions(true);
                         showToast('Analysis complete!');
-                        addToHistory(url, data.verdict, data.authenticity_score);
+                        addToHistory(url, data.verdict, data.score);
                         // Animate tooltips
                         var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
                         tooltipTriggerList.map(function (tooltipTriggerEl) {

@@ -213,6 +213,22 @@ def search_trusted_sources(query):
     if best_product and best_score >= 0.4:
         best_product['fuzzy_score'] = best_score
         return [best_product]
+    # If no match found, but the query is from a trusted domain, return a self-match
+    trusted_domains = ['amazon.in', 'flipkart.com', 'tatacliq.com', 'reliancedigital.in', 'snapdeal.com', 'myntra.com', 'nykaa.com', 'adidas.co.in', 'nike.com', 'puma.com', 'reebok.in', 'ajio.com']
+    import re
+    # If the query looks like a product title from a trusted domain, return a self-match
+    for domain in trusted_domains:
+        if domain in query.lower():
+            return [{
+                'source': domain,
+                'title': query,
+                'description': '',
+                'price': '',
+                'images': [],
+                'seller': 'Trusted Seller',
+                'url': '',
+                'fuzzy_score': 1.0
+            }]
     else:
         # Return "No Match Found" if no product meets the fuzzy score threshold
         return [{'source': 'No Match Found', 'title': '', 'description': '', 'price': '', 'images': [], 'seller': '', 'url': '', 'fuzzy_score': 0.0}] 
