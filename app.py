@@ -6,6 +6,7 @@ from analysis.image_similarity import compute_image_similarity
 from analysis.price_analysis import compute_price_deviation
 from ml.classifier import classify_product
 from config import Config  # Import the Config class
+import pandas as pd # Import pandas
 import time  # Import time for potential delays
 import logging
 from logging.handlers import RotatingFileHandler
@@ -74,7 +75,13 @@ def analyze() -> Any:
             try:
                 # Compute price deviation, handling potential errors during conversion or calculation
                 product_price = float(product['price'].replace(',', '').strip()) # Clean price string
-                price_dev = compute_price_deviation(product['price'], [float(ref['price'])])
+                # Safely convert reference price to float as well
+                try:
+                    ref_price = float(ref['price'].replace(',', '').strip())
+                    price_dev = compute_price_deviation(product_price, [ref_price])
+                except ValueError:
+                    app.logger.warning(f"Could not convert reference price '{ref['price']}' to float.")
+                    price_dev = 0.0 # Default to 0 deviation if ref price is invalid
             except Exception as e:
                 app.logger.warning(f'Price deviation error for product {product.get("title", "N/A")}: {e}')
                 price_dev = 0.0
@@ -83,20 +90,36 @@ def analyze() -> Any:
             text_sim = image_sim = 0.0
             price_dev = 0.0
             known_seller = False
+            # Default values if no trusted source match is found
+            num_reviews = product.get('num_reviews', 0)
+            avg_rating = product.get('avg_rating', 0.0)
+            image_count = product.get('image_count', 0)
+            desc_length = product.get('desc_length', 0)
+            keyword_original = int(product.get('keyword_flags', {}).get('original', 0))
+            keyword_replica = int(product.get('keyword_flags', {}).get('replica', 0))
+            keyword_genuine = int(product.get('keyword_flags', {}).get('100% genuine', 0))
 
+        # Define feature names corresponding to the training data
+        feature_names = [
+            'text_similarity',
+            'image_similarity',
+            'price_deviation',
+            'known_seller',
+            'num_reviews',
+            'avg_rating',
+            'image_count',
+            'desc_length',
+            'keyword_original',
+            'keyword_replica',
+            'keyword_100% genuine'
+        ]
         # Prepare features for the ML classifier
         features = [
             text_sim,
             image_sim,
             price_dev,
-            int(known_seller),
-            product.get('num_reviews', 0),
-            product.get('avg_rating', 0.0),
-            product.get('image_count', 0),
-            product.get('desc_length', 0),
-            int(product.get('keyword_flags', {}).get('original', 0)),
-            int(product.get('keyword_flags', {}).get('replica', 0)),
-            int(product.get('keyword_flags', {}).get('100% genuine', 0)),
+            int(known_seller), # Ensure boolean is converted to int
+            num_reviews, avg_rating, image_count, desc_length, keyword_original, keyword_replica, keyword_genuine
         ]
         score, verdict = classify_product(*features)
         app.logger.info(f"ML Classifier result for {url}: Score - {score}, Verdict - {verdict}")
@@ -108,10 +131,10 @@ def analyze() -> Any:
             'Image Similarity': f'{int(image_sim*100)}%',
             'Price Deviation': f'{int(price_dev*100)}%',
             'Seller': product['seller'],
-            'Reference Source': ref['source'] if trusted and trusted[0]['source'] != 'No Match Found' else 'N/A',
-            'Num Reviews': product.get('num_reviews', 0),
-            'Avg Rating': product.get('avg_rating', 0.0),
-            'Image Count': product.get('image_count', 0),
+            'Reference Source': ref['source'] if trusted and trusted[0]['source'] != 'No Match Found' else 'N/A', # Handle case where ref might not be defined
+            'Num Reviews': num_reviews,
+            'Avg Rating': avg_rating,
+            'Image Count': image_count,
             'Description Length': product.get('desc_length', 0),
             'Keyword: Original': int(product.get('keyword_flags', {}).get('original', 0)),
 
@@ -156,21 +179,12 @@ def analyze() -> Any:
                 'recommendation': recommendation
             }
             return jsonify(result)
+
+        # Organize features into a pandas DataFrame with column names
+        features_df = pd.DataFrame([features], columns=feature_names)
+
         # Always use ML classifier for verdict
-        features = [
-            text_sim,
-            image_sim,
-            price_dev,
-            int(known_seller),
-            product.get('num_reviews', 0),
-            product.get('avg_rating', 0.0),
-            product.get('image_count', 0),
-            product.get('desc_length', 0),
-            int(product.get('keyword_flags', {}).get('original', 0)),
-            int(product.get('keyword_flags', {}).get('replica', 0)),
-            int(product.get('keyword_flags', {}).get('100% genuine', 0)),
-        ]
-        score, verdict = classify_product(*features)
+        score, verdict = classify_product(features_df) # Pass the DataFrame
         # 5. Build response
         result = {
             'verdict': verdict,
