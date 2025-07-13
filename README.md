@@ -1,8 +1,13 @@
-# Fake Product Detector (India)
+# Fake Product Detector (India) - University Final Project
 
-A free, modern web app to detect potentially fake or scam products sold online in India. Paste any product URL to get an analysis comparing it to reputable marketplaces.
+## Project Description
+
+This project is a free, modern web application designed to help users in India detect potentially fake or scam products sold online. Users can paste the URL of a product from any Indian e-commerce site, and the application will analyze it by comparing it to trusted marketplaces. It provides an authenticity score, a verdict, and a detailed breakdown of the analysis. This project was developed as a final project for university, showcasing skills in web development, data scraping, data analysis, and machine learning.
 
 ---
+
+## Screenshot
+
 
 ## Screenshot
 
@@ -11,6 +16,8 @@ A free, modern web app to detect potentially fake or scam products sold online i
 ---
 
 ## Architecture
+
+The application follows a client-server architecture with a Flask backend. The user interacts with the frontend, which sends requests to the backend for analysis. The backend then utilizes various modules for scraping, data comparison, analysis (text, image, price), and a machine learning model to determine authenticity.
 
 ```mermaid
 graph TD;
