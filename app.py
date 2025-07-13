@@ -69,30 +69,60 @@ def analyze():
         is_trusted_domain = any(domain in url.lower() for domain in trusted_domains)
         
         if is_trusted_domain:
-            # For trusted domains, return high confidence result
-            text_sim = 1.0
-            image_sim = 1.0
-            price_dev = 0.0
+            # For trusted domains, still do some basic analysis
+            text_sim = 0.95
+            image_sim = 0.95
+            price_dev = 0.1
             known_seller = True
             
             # Extract additional features for display
             try:
-                num_reviews = int(product.get('num_reviews', 0))
-                avg_rating = float(product.get('avg_rating', 0))
-                image_count = int(product.get('image_count', 0))
-                desc_length = len(product.get('description', ''))
+                num_reviews = max(0, int(product.get('num_reviews', 0)))
+                avg_rating = max(0, min(5, float(product.get('avg_rating', 0))))
+                image_count = max(1, int(product.get('image_count', 1)))
+                desc_length = len(str(product.get('description', '')))
                 
-                # Keyword analysis
-                title_lower = product.get('title', '').lower()
-                keyword_original = 1 if 'original' in title_lower else 0
-                keyword_replica = 1 if 'replica' in title_lower else 0
-                keyword_genuine = 1 if 'genuine' in title_lower or '100%' in title_lower else 0
-            except:
-                pass
+                # Enhanced keyword analysis
+                title_desc = (product.get('title', '') + ' ' + product.get('description', '')).lower()
+                keyword_original = 1 if any(word in title_desc for word in ['original', 'authentic', 'official']) else 0
+                keyword_replica = 1 if any(word in title_desc for word in ['replica', 'copy', 'duplicate', 'fake']) else 0
+                keyword_genuine = 1 if any(word in title_desc for word in ['genuine', '100%', 'certified', 'warranty']) else 0
+                
+                # Adjust score based on content quality
+                base_score = 85
+                if keyword_replica > 0:
+                    base_score -= 20  # Penalty for replica keywords even on trusted sites
+                if avg_rating < 3.0 and num_reviews > 20:
+                    base_score -= 10  # Penalty for poor ratings
+                if keyword_genuine > 0 or keyword_original > 0:
+                    base_score += 5  # Bonus for genuine keywords
+                    
+                score = max(60, min(95, base_score))  # Keep within reasonable range
+                
+            except Exception as e:
+                app.logger.warning(f"Trusted domain feature extraction error: {e}")
+                num_reviews = avg_rating = image_count = desc_length = 0
+                keyword_original = keyword_replica = keyword_genuine = 0
+                score = 80
             
-            score = 85  # High score for trusted domains
-            verdict = "Likely Genuine"
-            ref_source = "amazon.in" if "amazon.in" in url.lower() else "flipkart.com" if "flipkart.com" in url.lower() else "Trusted Source"
+            if score >= 85:
+                verdict = "Highly Genuine"
+            elif score >= 70:
+                verdict = "Likely Genuine"
+            else:
+                verdict = "Suspicious"
+                
+            # Determine reference source
+            if "amazon" in url.lower():
+                ref_source = "Amazon"
+            elif "flipkart" in url.lower():
+                ref_source = "Flipkart"
+            elif "myntra" in url.lower():
+                ref_source = "Myntra"
+            elif "tatacliq" in url.lower():
+                ref_source = "Tata Cliq"
+            else:
+                ref_source = "Trusted Domain"
             
         else:
             # For non-trusted domains, use ML model
@@ -103,36 +133,49 @@ def analyze():
                 
                 # Calculate similarities
                 if ref and ref.get('title'):
-                    text_sim = calculate_text_similarity(product['title'], ref['title'])
+                    text_sim = calculate_text_similarity(product.get('title', ''), ref['title'])
                 else:
-                    text_sim = 0.0
+                    text_sim = 0.1  # Low similarity if no reference
                 
-                if ref and ref.get('image_url'):
+                if ref and ref.get('image_url') and product.get('image_url'):
                     image_sim = calculate_image_similarity(product.get('image_url', ''), ref['image_url'])
                 else:
-                    image_sim = 0.0
+                    image_sim = 0.1  # Low similarity if no images
                 
                 # Price deviation
-                if ref and ref.get('price'):
-                    price_dev = calculate_price_deviation(float(product.get('price', 0)), [float(ref['price'])])
+                product_price = product.get('price', 0)
+                if ref and ref.get('price') and product_price:
+                    try:
+                        ref_prices = [float(ref['price'])]
+                        price_dev = calculate_price_deviation(float(product_price), ref_prices)
+                    except:
+                        price_dev = 1.0  # High deviation on error
                 else:
-                    price_dev = 0.0
+                    price_dev = 0.5  # Medium deviation if no reference price
                 
-                known_seller = product['seller'].lower() == ref['seller'].lower() if ref else False
-                
-                # Extract additional features
+                # Seller comparison
                 try:
-                    num_reviews = int(product.get('num_reviews', 0))
-                    avg_rating = float(product.get('avg_rating', 0))
-                    image_count = int(product.get('image_count', 0))
-                    desc_length = len(product.get('description', ''))
-                    
-                    title_lower = product.get('title', '').lower()
-                    keyword_original = int(product.get('keyword_flags', {}).get('original', 0))
-                    keyword_replica = int(product.get('keyword_flags', {}).get('replica', 0))
-                    keyword_genuine = int(product.get('keyword_flags', {}).get('100% genuine', 0))
+                    known_seller = (product.get('seller', '').lower() == ref.get('seller', '').lower()) if ref else False
                 except:
-                    pass
+                    known_seller = False
+                
+                # Extract additional features with better defaults
+                try:
+                    num_reviews = max(0, int(product.get('num_reviews', 0)))
+                    avg_rating = max(0, min(5, float(product.get('avg_rating', 0))))
+                    image_count = max(0, int(product.get('image_count', 1)))
+                    desc_length = len(str(product.get('description', '')))
+                    
+                    # Keyword analysis
+                    title_desc = (product.get('title', '') + ' ' + product.get('description', '')).lower()
+                    keyword_original = 1 if any(word in title_desc for word in ['original', 'authentic', 'official']) else 0
+                    keyword_replica = 1 if any(word in title_desc for word in ['replica', 'copy', 'duplicate', 'fake']) else 0
+                    keyword_genuine = 1 if any(word in title_desc for word in ['genuine', '100%', 'certified', 'warranty']) else 0
+                    
+                except Exception as e:
+                    app.logger.warning(f"Feature extraction error: {e}")
+                    num_reviews = avg_rating = image_count = desc_length = 0
+                    keyword_original = keyword_replica = keyword_genuine = 0
                 
                 # Prepare features for ML classifier
                 features = [
@@ -141,16 +184,18 @@ def analyze():
                     keyword_original, keyword_replica, keyword_genuine
                 ]
                 
+                app.logger.info(f"Features for classification: {features}")
                 score, verdict = classify_product(*features)
-                ref_source = ref.get('source', 'N/A') if ref else 'N/A'
+                ref_source = ref.get('source', 'No Reference') if ref else 'No Reference'
                 
             except Exception as e:
                 app.logger.error(f"ML analysis failed: {str(e)}")
-                score = 30  # Low score for failed analysis
-                verdict = "High Risk"
-                text_sim = image_sim = price_dev = 0.0
+                score = 25  # Very low score for failed analysis
+                verdict = "High Risk - Analysis Failed"
+                text_sim = image_sim = 0.0
+                price_dev = 1.0
                 known_seller = False
-                ref_source = 'N/A'
+                ref_source = 'Analysis Failed'
         
         # Build response
         result = {
