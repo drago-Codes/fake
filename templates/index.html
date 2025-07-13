@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fake Product Detector (India)</title>
+    <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/1828/1828843.png">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Montserrat', Arial, sans-serif; }
+        .hero-bg {
+            background: linear-gradient(120deg, #6a82fb 0%, #fc5c7d 100%);
+            min-height: 320px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        .glass-card {
+            background: rgba(255,255,255,0.85);
+            border-radius: 1.5rem;
+            box-shadow: 0 8px 32px 0 rgba(31,38,135,0.18);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,255,255,0.18);
+        }
+        .verdict-anim { animation: slideFadeIn 0.7s; }
+        @keyframes slideFadeIn { from { opacity: 0; transform: translateY(40px);} to { opacity: 1; transform: none; } }
+        .how-steps { display: flex; flex-wrap: wrap; gap: 1.5rem; justify-content: center; }
+        .how-step { flex: 1 1 180px; min-width: 180px; max-width: 220px; background: #fff; border-radius: 1rem; box-shadow: 0 2px 12px rgba(0,0,0,0.07); padding: 1.2rem; text-align: center; }
+        .how-step i { font-size: 2.2rem; color: #6a82fb; margin-bottom: 0.5rem; }
+        .divider { height: 3px; background: linear-gradient(90deg, #6a82fb 0%, #fc5c7d 100%); border-radius: 2px; margin: 2rem 0; }
+        .custom-btn { transition: transform 0.15s, box-shadow 0.15s; }
+        .custom-btn:hover { transform: translateY(-2px) scale(1.04); box-shadow: 0 4px 16px rgba(252,92,125,0.12); }
+        .dark-toggle-btn {
+            position: absolute;
+            top: 24px;
+            right: 32px;
+            z-index: 10;
+            background: rgba(0,0,0,0.18);
+            color: #fff;
+            border: none;
+            border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            transition: background 0.2s;
+        }
+        .dark-toggle-btn:hover { background: rgba(0,0,0,0.32); }
+        body.dark-mode {
+            background: #181c24;
+            color: #e3e6ee;
+        }
+        body.dark-mode .hero-bg {
+            background: linear-gradient(120deg, #23243a 0%, #3a2c3d 100%);
+        }
+        body.dark-mode .glass-card {
+            background: rgba(34,36,54,0.92);
+            color: #e3e6ee;
+            border: 1px solid rgba(80,80,120,0.18);
+        }
+        body.dark-mode .how-step {
+            background: #23243a;
+            color: #e3e6ee;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.18);
+        }
+        body.dark-mode .divider {
+            background: linear-gradient(90deg, #6a82fb 0%, #fc5c7d 100%);
+        }
+        body.dark-mode .footer {
+            background: #23243a;
+            color: #aaa;
+            border-top: 1px solid #444;
+        }
+        body.dark-mode .list-group-item {
+            background: transparent;
+            color: #e3e6ee;
+            border-bottom: 1px solid #333;
+        }
+        body.dark-mode .btn-primary {
+            background: #6a82fb;
+            color: #fff;
+        }
+        body.dark-mode .btn-primary:hover {
+            background: #fc5c7d;
+        }
+        body.dark-mode .custom-btn {
+            background: #23243a;
+            color: #e3e6ee;
+            border: 1px solid #444;
+        }
+        body.dark-mode .custom-btn:hover {
+            background: #3a2c3d;
+            color: #fff;
+        }
+        body.dark-mode .modal-content {
+            background: #23243a;
+            color: #e3e6ee;
+        }
+        @media (max-width: 600px) {
+            .how-steps { flex-direction: column; gap: 1rem; }
+            .hero-bg { min-height: 180px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="hero-bg">
+        <button id="dark-toggle" class="dark-toggle-btn" title="Toggle dark mode" aria-label="Toggle dark mode"><i class="bi bi-moon"></i></button>
+        <div class="text-center text-white">
+            <img src="https://cdn-icons-png.flaticon.com/512/1828/1828843.png" alt="Logo" style="height:60px;">
+            <h1 class="fw-bold display-4 mt-2" style="font-family: 'Montserrat', Arial, sans-serif; letter-spacing:1px;">Fake Product Detector</h1>
+            <p class="lead mb-0">Spot fake or scam products instantly. India Edition.</p>
+        </div>
+    </div>
+    <div class="container position-relative" style="z-index:2; margin-top:-100px;">
+        <div class="row justify-content-center">
+            <div class="col-md-8 col-lg-6">
+                <div class="glass-card p-4 shadow-lg mb-4">
+                    <form id="analyze-form" class="mb-3">
+                        <div class="input-group">
+                            <input type="url" class="form-control form-control-lg" id="product-url" placeholder="Paste product URL here..." required aria-label="Product URL">
+                            <button class="btn btn-primary btn-lg custom-btn" type="submit"><i class="bi bi-search"></i> Check</button>
+                        </div>
+                        <div class="d-flex justify-content-between mt-2">
+                            <button id="sample-btn" type="button" class="btn btn-link p-0">Try Sample URL</button>
+                            <small class="text-muted">Paste a product link from any e-commerce site</small>
+                        </div>
+                    </form>
+                    <div id="loading" class="text-center my-4" style="display:none;">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Analyzing product, please wait...</p>
+                    </div>
+                    <div id="results" style="display:none;"></div>
+                    <div id="result-actions" class="d-flex gap-2 my-3" style="display:none;">
+                        <button id="download-pdf" class="btn btn-outline-success btn-sm custom-btn" aria-label="Download result as PDF"><i class="bi bi-file-earmark-pdf"></i> Download PDF</button>
+                        <button id="copy-result" class="btn btn-outline-secondary btn-sm custom-btn" aria-label="Copy result to clipboard"><i class="bi bi-clipboard"></i> Copy Result</button>
+                    </div>
+                </div>
+                <div id="history" class="mt-5" style="display:none;">
+                    <h5 class="mb-3"><i class="bi bi-clock-history"></i> Recent Analyses</h5>
+                    <ul class="list-group" id="history-list"></ul>
+                </div>
+                <div class="divider"></div>
+                <section class="mt-5" id="how-it-works">
+                    <h4 class="mb-4 text-center">How it works</h4>
+                    <div class="how-steps">
+                        <div class="how-step"><i class="bi bi-link-45deg"></i><div>Paste a product URL</div></div>
+                        <div class="how-step"><i class="bi bi-search"></i><div>We scrape product details</div></div>
+                        <div class="how-step"><i class="bi bi-shield-check"></i><div>Compare with trusted sources</div></div>
+                        <div class="how-step"><i class="bi bi-cpu"></i><div>ML model predicts authenticity</div></div>
+                        <div class="how-step"><i class="bi bi-emoji-smile"></i><div>Get instant verdict & advice</div></div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+    <footer class="footer mt-auto py-3 bg-light border-top mt-5">
+        <div class="container text-center small text-muted">
+            Made for Indian e-commerce safety &middot; <a href="https://github.com/" target="_blank">GitHub</a> &middot; <span>Your Name, 2024</span>
+        </div>
+    </footer>
+    <button id="back-to-top" class="btn btn-primary position-fixed" style="bottom: 90px; right: 30px; display:none; z-index:9999;" aria-label="Back to top">
+        <i class="bi bi-arrow-up"></i>
+    </button>
+    <!-- About Modal -->
+    <div class="modal fade" id="aboutModal" tabindex="-1" aria-labelledby="aboutModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="aboutModalLabel">About This Project</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <p><strong>Fake Product Detector (India)</strong> is a university project that uses web scraping, trusted source comparison, and machine learning to help users spot potentially fake or scam products online.</p>
+            <ul>
+              <li>Scrapes product details from any Indian e-commerce site</li>
+              <li>Compares with trusted sources (Amazon, Flipkart, etc)</li>
+              <li>Uses text/image similarity, price deviation, and seller credibility</li>
+              <li>ML model predicts authenticity and gives a verdict</li>
+              <li>Open-source, privacy-friendly, and free to use</li>
+            </ul>
+            <p class="mb-0"><strong>For demo/educational use only.</strong></p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+        <div id="toast-feedback" class="toast align-items-center text-bg-primary border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body"></div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script>
+        function showToast(msg, isError=false) {
+            const toast = new bootstrap.Toast(document.getElementById('toast-feedback'));
+            const toastEl = $('#toast-feedback');
+            toastEl.removeClass('text-bg-primary text-bg-danger');
+            toastEl.addClass(isError ? 'text-bg-danger' : 'text-bg-primary');
+            toastEl.find('.toast-body').text(msg);
+            toast.show();
+        }
+        function addToHistory(url, verdict, score) {
+            let list = $('#history-list');
+            let item = `<li class='list-group-item fade-in'><strong>${verdict}</strong> (${score}%)<br><small>${url}</small></li>`;
+            list.prepend(item);
+            $('#history').show();
+        }
+        function showResultActions(show) {
+            if(show) $('#result-actions').show(); else $('#result-actions').hide();
+        }
+        function getResultText() {
+            return $('#results').text();
+        }
+        $(function() {
+            // Dark mode toggle
+            $('#dark-toggle').on('click', function() {
+                $('body').toggleClass('dark-mode');
+                localStorage.setItem('darkMode', $('body').hasClass('dark-mode'));
+                $(this).find('i').toggleClass('bi-moon bi-sun');
+            });
+            if(localStorage.getItem('darkMode') === 'true') {
+                $('body').addClass('dark-mode');
+                $('#dark-toggle i').removeClass('bi-moon').addClass('bi-sun');
+            }
+            // Sample URL button
+            $('#sample-btn').on('click', function() {
+                $('#product-url').val('https://www.amazon.in/dp/B09G9BL5CP');
+                showToast('Sample URL loaded!');
+            });
+            // Show/hide back-to-top button
+            $(window).on('scroll', function() {
+                if($(window).scrollTop() > 200) $('#back-to-top').fadeIn(); else $('#back-to-top').fadeOut();
+            });
+            $('#back-to-top').on('click', function() {
+                window.scrollTo({top:0,behavior:'smooth'});
+            });
+            // Download PDF
+            $('#download-pdf').on('click', function() {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                doc.text($('#results').text(), 10, 10);
+                doc.save('analysis_result.pdf');
+            });
+            // Copy result
+            $('#copy-result').on('click', function() {
+                navigator.clipboard.writeText($('#results').text());
+                showToast('Result copied!');
+            });
+            // Form submit
+            $('#analyze-form').on('submit', function(e) {
+                e.preventDefault();
+                $('#results').hide();
+                $('#loading').show();
+                const url = $('#product-url').val();
+                $.ajax({
+                    url: '/analyze',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ url }),
+                    success: function(data) {
+                        $('#loading').hide();
+                        if(data.error) {
+                            $('#results').html(`<div class='alert alert-danger fade-in verdict-anim'>${data.error}</div>`).show();
+                            showToast(data.error, true);
+                            showResultActions(false);
+                            return;
+                        }
+                        let icon = data.verdict==="Likely Genuine" ? '<i class="bi bi-shield-check text-success"></i>' : '<i class="bi bi-exclamation-triangle text-danger"></i>';
+                        let html = `<div class='card shadow fade-in verdict-anim'><div class='card-body'>`;
+                        html += `<h3 class='mb-3'>${icon} Verdict: <span class='${data.verdict==="Likely Genuine"?'text-success':'text-danger'}'>${data.verdict}</span></h3>`;
+                        html += `<p><strong>Authenticity Score:</strong> <span class='fw-bold'>${data.authenticity_score}%</span></p>`;
+                        html += `<ul class='list-group mb-3'>`;
+                        for (const [k, v] of Object.entries(data.details)) {
+                            html += `<li class='list-group-item d-flex justify-content-between align-items-center'><span>${k}</span><span class='fw-semibold'>${v}</span></li>`;
+                        }
+                        html += `</ul>`;
+                        html += `<p class='mb-0'><strong>Recommendation:</strong> <span class='fw-semibold'>${data.recommendation}</span></p>`;
+                        html += `</div></div>`;
+                        $('#results').html(html).show();
+                        showResultActions(true);
+                        showToast('Analysis complete!');
+                        addToHistory(url, data.verdict, data.authenticity_score);
+                    },
+                    error: function(xhr) {
+                        $('#loading').hide();
+                        let msg = 'Error analyzing product.';
+                        if(xhr.responseJSON && xhr.responseJSON.error) msg = xhr.responseJSON.error;
+                        $('#results').html(`<div class='alert alert-danger fade-in verdict-anim'>${msg}</div>`).show();
+                        showResultActions(false);
+                        showToast(msg, true);
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html> 

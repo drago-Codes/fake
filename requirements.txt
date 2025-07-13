@@ -1,0 +1,13 @@
+flask
+requests
+beautifulsoup4
+selenium
+spacy
+sentence-transformers
+scikit-learn
+imagehash
+pillow 
+rapidfuzz 
+# Frontend dependencies (for documentation)
+# jsPDF for PDF export
+# Bootstrap Icons for UI icons 
