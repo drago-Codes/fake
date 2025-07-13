@@ -83,17 +83,6 @@ def analyze() -> Any:
             'Keyword: Replica': int(product.get('keyword_flags', {}).get('replica', 0)),
             'Keyword: 100% Genuine': int(product.get('keyword_flags', {}).get('100% genuine', 0)),
         }
-        # Strong trusted domain override: always Likely Genuine for big sites if scraping succeeded, but show real details
-        if any(domain in url for domain in trusted_domains):
-            verdict = 'Likely Genuine'
-            score = 95
-            result = {
-                'verdict': verdict,
-                'authenticity_score': score,
-                'details': details,
-                'recommendation': 'This appears to be a genuine product from a trusted source.'
-            }
-            return jsonify(result)
         # Handle missing/empty data gracefully
         if (
             product.get('num_reviews', 0) == 0 and
@@ -185,6 +174,9 @@ def analyze() -> Any:
             'details': details,
             'recommendation': 'Avoid purchasing.' if verdict != 'Likely Genuine' else 'Safe to buy from trusted source.'
         }
+        is_trusted = any(domain in url for domain in trusted_domains)
+        if is_trusted:
+            result['note'] = 'This product is from a trusted source, but the authenticity is still analyzed.'
         return jsonify(result)
     except Exception as e:
         logging.error(f'Analysis error: {e}', exc_info=True)

@@ -203,6 +203,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <script>
         function showToast(msg, isError=false) {
             const toast = new bootstrap.Toast(document.getElementById('toast-feedback'));
@@ -279,12 +280,28 @@
                             return;
                         }
                         let icon = data.verdict==="Likely Genuine" ? '<i class="bi bi-shield-check text-success"></i>' : '<i class="bi bi-exclamation-triangle text-danger"></i>';
+                        let badge = data.verdict==="Likely Genuine" ? '<span class="badge bg-success ms-2">✔</span>' : '<span class="badge bg-danger ms-2">!</span>';
                         let html = `<div class='card shadow fade-in verdict-anim'><div class='card-body'>`;
-                        html += `<h3 class='mb-3'>${icon} Verdict: <span class='${data.verdict==="Likely Genuine"?'text-success':'text-danger'}'>${data.verdict}</span></h3>`;
+                        html += `<h3 class='mb-3'>${icon} Verdict: <span class='${data.verdict==="Likely Genuine"?'text-success':'text-danger'}'>${data.verdict}</span> ${badge}</h3>`;
                         html += `<p><strong>Authenticity Score:</strong> <span class='fw-bold'>${data.authenticity_score}%</span></p>`;
                         html += `<ul class='list-group mb-3'>`;
+                        const tooltips = {
+                            'Avg Rating': 'Average user rating (out of 5)',
+                            'Description Length': 'Number of characters in product description',
+                            'Image Count': 'Number of product images',
+                            'Image Similarity': 'Similarity to trusted source image',
+                            'Keyword: 100% Genuine': 'Contains the phrase "100% Genuine"',
+                            'Keyword: Original': 'Contains the word "Original"',
+                            'Keyword: Replica': 'Contains the word "Replica"',
+                            'Num Reviews': 'Number of user reviews',
+                            'Price Deviation': 'Difference from trusted source price',
+                            'Reference Source': 'Matched trusted e-commerce site',
+                            'Seller': 'Seller name',
+                            'Title Similarity': 'Similarity to trusted source title'
+                        };
                         for (const [k, v] of Object.entries(data.details)) {
-                            html += `<li class='list-group-item d-flex justify-content-between align-items-center'><span>${k}</span><span class='fw-semibold'>${v}</span></li>`;
+                            let tip = tooltips[k] ? ` data-bs-toggle='tooltip' title='${tooltips[k]}'` : '';
+                            html += `<li class='list-group-item d-flex justify-content-between align-items-center'${tip}><span>${k}</span><span class='fw-semibold'>${v}</span></li>`;
                         }
                         html += `</ul>`;
                         html += `<p class='mb-0'><strong>Recommendation:</strong> <span class='fw-semibold'>${data.recommendation}</span></p>`;
@@ -293,6 +310,19 @@
                         showResultActions(true);
                         showToast('Analysis complete!');
                         addToHistory(url, data.verdict, data.authenticity_score);
+                        // Animate tooltips
+                        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+                        tooltipTriggerList.map(function (tooltipTriggerEl) {
+                            return new bootstrap.Tooltip(tooltipTriggerEl);
+                        });
+                        // Confetti for Likely Genuine
+                        if(data.verdict==="Likely Genuine") {
+                            confetti({
+                                particleCount: 120,
+                                spread: 70,
+                                origin: { y: 0.6 }
+                            });
+                        }
                     },
                     error: function(xhr) {
                         $('#loading').hide();
